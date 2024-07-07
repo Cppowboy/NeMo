@@ -104,6 +104,7 @@ def convert(args):
         print(f"- {name}")
 
     nemo_config = load_config(args, hf_config)
+    print('loaded nemo config')
 
     if args.precision in ["32", "16"]:
         precision = int(float(args.precision))
@@ -115,7 +116,7 @@ def convert(args):
             precision = args.precision[2:]  # prune bf in string
     else:
         precision = args.precision
-
+    print('plugin precision:', precision)
     plugins = []
     if precision in [16, '16', 'bf16', '16-mixed', 'bf16-mixed']:
         scaler = None
