@@ -98,13 +98,13 @@ def convert(args):
     model = Qwen2ForCausalLM.from_pretrained(args.input_name_or_path)
     tokenizer = Qwen2Tokenizer.from_pretrained(args.input_name_or_path)
     hf_config = vars(model.config)
-    print(f"hf_config: {hf_config}")
-    print("named parameters:")
+    logging.info(f"hf_config: {hf_config}")
+    logging.info("named parameters:")
     for name, param in model.named_parameters():
-        print(f"- {name}")
+        logging.info(f"- {name}")
 
     nemo_config = load_config(args, hf_config)
-    print('loaded nemo config')
+    logging.info('loaded nemo config')
 
     if args.precision in ["32", "16"]:
         precision = int(float(args.precision))
@@ -116,11 +116,11 @@ def convert(args):
             precision = args.precision[2:]  # prune bf in string
     else:
         precision = args.precision
-    print('plugin precision:', precision)
+    logging.info(f'plugin precision: {precision}')
     plugins = []
     if precision in [16, '16', 'bf16', '16-mixed', 'bf16-mixed']:
         scaler = None
-        print('start')
+        logging.info('start')
         if precision in [16, '16', '16-mixed']:
             scaler = GradScaler(
                 init_scale=nemo_config.get('native_amp_init_scale', 2**32),
@@ -131,23 +131,23 @@ def convert(args):
             plugin_precision = '16-mixed'
         else:
             plugin_precision = 'bf16-mixed'
-        print('megatron amp o2')
+        logging.info('megatron amp o2')
         if nemo_config.get('megatron_amp_O2', False):
-            print('haha')
+            logging.info('haha')
             plugins.append(MegatronHalfPrecisionPlugin(precision=plugin_precision, device='cuda', scaler=scaler))
-            print('haha')
+            logging.info('haha')
         else:
-            print('hehe')
+            logging.info('hehe')
             plugins.append(PipelineMixedPrecisionPlugin(precision=plugin_precision, device='cuda', scaler=scaler))
-            print('hehe')
-    print(f"nemo_config: {nemo_config}")
+            logging.info('hehe')
+    logging.info(f"nemo_config: {nemo_config}")
     nemo_config.precision = precision
-    print(f"nemo_config: {nemo_config}")
+    logging.info(f"nemo_config: {nemo_config}")
 
     # Remove precision arg, since with PTL >= 2.1 both precision and precision plugin cannot exist together.
-    print('trainer start')
+    logging.info('trainer start')
     trainer = Trainer(plugins=plugins, accelerator='cpu', strategy=NLPDDPStrategy())
-    print('trainer builded')
+    logging.info('trainer builded')
     hidden_size = hf_config["hidden_size"]
     head_num = hf_config["num_attention_heads"]
     head_size = hidden_size // head_num
@@ -189,7 +189,7 @@ def convert(args):
         assert nemo_config.activation.startswith('fast-'), 'mcore only supports fast version of gated linear unit.'
 
     for l in range(int(num_layers)):
-        print(f"converting layer {l}")
+        logging.info(f"converting layer {l}")
         old_tensor_shape = model.state_dict()[f'model.layers.{l}.self_attn.q_proj.weight'].size()
         new_q_tensor_shape = (head_num, head_size) + old_tensor_shape[1:]
         new_kv_tensor_shape = (num_query_groups, head_size) + old_tensor_shape[1:]
@@ -271,7 +271,7 @@ def convert(args):
             post_attn_ln_base_name = f'model.language_model.encoder.layers.{l}.post_attention_layernorm.weight'
         checkpoint['state_dict'][post_attn_ln_base_name] = param_to_weights(post_attn_ln_weight)
 
-        print(f"done layer {l}")
+        logging.info(f"done layer {l}")
 
     final_ln_weight = model.state_dict()[f'model.norm.weight']
     if mcore_gpt:
