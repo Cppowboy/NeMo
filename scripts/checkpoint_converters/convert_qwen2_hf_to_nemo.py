@@ -119,7 +119,6 @@ def convert(args):
     print('plugin precision:', precision)
     plugins = []
     if precision in [16, '16', 'bf16', '16-mixed', 'bf16-mixed']:
-        print('plugin: 1')
         scaler = None
         if precision in [16, '16', '16-mixed']:
             scaler = GradScaler(
@@ -131,13 +130,11 @@ def convert(args):
             plugin_precision = '16-mixed'
         else:
             plugin_precision = 'bf16-mixed'
-        print('plugin: 2')
         if nemo_config.get('megatron_amp_O2', False):
             plugins.append(MegatronHalfPrecisionPlugin(precision=plugin_precision, device='cuda', scaler=scaler))
         else:
             plugins.append(PipelineMixedPrecisionPlugin(precision=plugin_precision, device='cuda', scaler=scaler))
-        print('plugin: 3')
-    print('hahaha')
+    print(f"nemo_config: {nemo_config}")
     nemo_config.precision = precision
     print(f"nemo_config: {nemo_config}")
 
