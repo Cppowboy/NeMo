@@ -132,8 +132,10 @@ def convert(args):
             plugin_precision = 'bf16-mixed'
         if nemo_config.get('megatron_amp_O2', False):
             plugins.append(MegatronHalfPrecisionPlugin(precision=plugin_precision, device='cuda', scaler=scaler))
+            print('haha')
         else:
             plugins.append(PipelineMixedPrecisionPlugin(precision=plugin_precision, device='cuda', scaler=scaler))
+            print('hehe')
     print(f"nemo_config: {nemo_config}")
     nemo_config.precision = precision
     print(f"nemo_config: {nemo_config}")
